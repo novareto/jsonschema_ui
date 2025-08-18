@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="jsonchema_ui",
+    name="jsonschema_ui",
     version="0.1.0",
     description="JSONSchema UI extraction",
     author="Christian Klinger",
@@ -23,3 +23,4 @@ setup(
         "Programming Language :: Python :: 3.11",
     ],
 )
+
