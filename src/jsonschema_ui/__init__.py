@@ -4,6 +4,11 @@ from colander import Schema
 from deform.widget import Widget
 
 
+class Mask(NamedTuple):
+    mask: str
+    mask_placeholder: str
+
+
 class Label(NamedTuple):
     value: str | int
     label: str
@@ -15,6 +20,7 @@ class UIField(BaseModel):
     attributes: dict = Field(alias='ui:attributes', default_factory=dict)
     widget: str | None = Field(alias='ui:widget', default=None)
     column: str | None = Field(alias='ui:clumn', default=None)
+    mask: Mask | None = Field(alias='ui:mask', default=None)
     options: list[Label, ...] | None = Field(alias='ui:options', default=None)
 
 
@@ -38,11 +44,16 @@ def apply_ui_to_colander(
             field.title = uifield.title
             field.description = uifield.description
             if uifield.widget is not None:
+                if not widgets:
+                    raise ValueError(
+                        f'Widgets mapping is missing while looking for {uifield.widget}.')
                 widget = widgets[uifield.widget]
                 options = {}
                 if uifield.attributes:
                     options['attributes'] = uifield.attributes
                 if uifield.options:
-                    options['choices'] = uifield.options
+                    options['values'] = uifield.options
+                if uifield.mask:
+                    options.update(uifield.mask._asdict())
                 field.widget = widget(**options)
     return schema
