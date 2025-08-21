@@ -24,22 +24,6 @@ class UIField(BaseModel):
     options: list[Label, ...] | None = Field(alias="ui:options", default=None)
 
 
-def find_field(node, path):
-
-    if hasattr(node, '__getitem__') and path[0] in node:
-        node = node[path[0]]
-    elif hasattr(node, 'children'):
-        for child in schema.children:
-            if child.name == path[0]:
-                node = child
-                break
-    if not node:
-        raise LookupError('Node not found in schema.')
-    if len(path) > 1:
-        return find_field(node, path[1:])
-    return node
-
-
 def parse_ui(ui_mapping: Mapping):
     uischema = {}
     for field, config in ui_mapping.items():
@@ -52,9 +36,57 @@ def parse_ui(ui_mapping: Mapping):
 def apply_ui_to_colander(
     schema: Schema, ui: Mapping[str, UIField], widgets: dict | None = None
 ):
+    def find_field_by_path(node, path_parts):
+        """Find field using path notation like 'telefonnummern.items.name'"""
+        current = node
+        
+        for part in path_parts:
+            found = False
+            
+            # Try direct access first
+            if hasattr(current, '__getitem__') and part in current:
+                current = current[part]
+                found = True
+            # Search in children
+            elif hasattr(current, 'children'):
+                for child in current.children:
+                    if child.name == part:
+                        current = child
+                        found = True
+                        break
+            
+            if not found:
+                return None
+                
+        return current
+    
+    def find_field_recursive(node, field_name):
+        """Fallback: recursively search for a field by name only"""
+        if hasattr(node, '__getitem__') and field_name in node:
+            return node[field_name]
+        
+        if hasattr(node, 'children'):
+            for child in node.children:
+                if child.name == field_name:
+                    return child
+                # Recursively search in nested schemas
+                result = find_field_recursive(child, field_name)
+                if result is not None:
+                    return result
+        return None
+    
     for name, uifield in ui.items():
-        path = name.split('.')
-        field = find_field(schema, path)
+        field = None
+        
+        # If name contains dots, try path-based lookup first
+        if '.' in name:
+            path_parts = name.split('.')
+            field = find_field_by_path(schema, path_parts)
+        
+        # If path-based lookup failed or no dots, try recursive search
+        if field is None:
+            field = find_field_recursive(schema, name)
+        
         if field is not None:
             field.title = uifield.title
             field.description = uifield.description
@@ -73,10 +105,10 @@ def apply_ui_to_colander(
                 if uifield.mask:
                     options.update(uifield.mask._asdict())
                 field.widget = widget(**options)
-            elif field.widget:
-                if uifield.attributes:
+            else:
+                if uifield.attributes and field.widget is not None:
                     field.widget.attributes = uifield.attributes
-                if uifield.options:
+                if uifield.options and field.widget is not None:
                     field.widget.choices = uifield.options
         else:
             print(f"Warnung: Feld '{name}' wurde im Schema nicht gefunden")

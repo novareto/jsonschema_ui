@@ -1,7 +1,7 @@
 import hamcrest
 import colander
 import deform.widget
-from jsonschema_ui import parse_ui, UIField, apply_ui_to_colander, find_field
+from jsonschema_ui import parse_ui, UIField, apply_ui_to_colander
 
 
 class Info(colander.Schema):
@@ -98,7 +98,20 @@ def test_apply():
     )
 
 
-def test_find_field():
+def test_nested_field_lookup():
+       """Test that nested fields can be accessed via path notation"""
+       ui = {
+           "person.info.date": {
+               "ui:title": "Birth Date",
+               "ui:description": "Date of birth",
+               "ui:widget": "date"
+           }
+       }
+       ui_parsed = parse_ui(ui)
        schema = ComplexSchema()
-       field = find_field(schema, ['person', 'info', 'date'])
-       assert field is schema['person']['info']['date']
+       result = apply_ui_to_colander(schema, ui_parsed, widgets={"date": deform.widget.DateInputWidget})
+       
+       # Check that the nested field was found and modified
+       date_field = schema['person']['info']['date']
+       assert date_field.title == "Birth Date"
+       assert date_field.description == "Date of birth"
