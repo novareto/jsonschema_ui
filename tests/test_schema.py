@@ -1,7 +1,31 @@
 import hamcrest
 import colander
-from deform.widget import RadioChoiceWidget
-from jsonschema_ui import parse_ui, UIField, apply_ui_to_colander
+import deform.widget
+from jsonschema_ui import parse_ui, UIField, apply_ui_to_colander, find_field
+
+
+class Info(colander.Schema):
+       age = colander.SchemaNode(
+              colander.Integer(),
+              description="Age"
+       )
+       date = colander.SchemaNode(
+              colander.Date(),
+              widget=deform.widget.DatePartsWidget(),
+              description="Birth",
+       )
+
+
+class Person(colander.Schema):
+       name = colander.SchemaNode(
+              colander.String(), description="Content name"
+       )
+       info = Info()
+
+
+class ComplexSchema(colander.Schema):
+       id = colander.SchemaNode(colander.Integer())
+       person = Person()
 
 
 class DocumentSchema(colander.Schema):
@@ -65,11 +89,16 @@ def test_schema():
     result = parse_ui(EXAMPLE)
 
 
-
 def test_apply():
     ui = parse_ui(EXAMPLE)
     result = apply_ui_to_colander(
         DocumentSchema(),
         ui,
-        widgets={"radio": RadioChoiceWidget}
+        widgets={"radio": deform.widget.RadioChoiceWidget}
     )
+
+
+def test_find_field():
+       schema = ComplexSchema()
+       field = find_field(schema, ['person', 'info', 'date'])
+       assert field is schema['person']['info']['date']

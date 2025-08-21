@@ -24,6 +24,22 @@ class UIField(BaseModel):
     options: list[Label, ...] | None = Field(alias="ui:options", default=None)
 
 
+def find_field(node, path):
+
+    if hasattr(node, '__getitem__') and path[0] in node:
+        node = node[path[0]]
+    elif hasattr(node, 'children'):
+        for child in schema.children:
+            if child.name == path[0]:
+                node = child
+                break
+    if not node:
+        raise LookupError('Node not found in schema.')
+    if len(path) > 1:
+        return find_field(node, path[1:])
+    return node
+
+
 def parse_ui(ui_mapping: Mapping):
     uischema = {}
     for field, config in ui_mapping.items():
@@ -36,24 +52,9 @@ def parse_ui(ui_mapping: Mapping):
 def apply_ui_to_colander(
     schema: Schema, ui: Mapping[str, UIField], widgets: dict | None = None
 ):
-    def find_field_recursive(schema, field_name):
-        """Recursively search for a field in the schema, including nested schemas"""
-        if hasattr(schema, '__getitem__') and field_name in schema:
-            return schema[field_name]
-        
-        # Search in child schemas
-        if hasattr(schema, 'children'):
-            for child in schema.children:
-                if child.name == field_name:
-                    return child
-                # Recursively search in nested schemas
-                result = find_field_recursive(child, field_name)
-                if result is not None:
-                    return result
-        return None
-    
     for name, uifield in ui.items():
-        field = find_field_recursive(schema, name)
+        path = name.split('.')
+        field = find_field(schema, path)
         if field is not None:
             field.title = uifield.title
             field.description = uifield.description
@@ -72,7 +73,7 @@ def apply_ui_to_colander(
                 if uifield.mask:
                     options.update(uifield.mask._asdict())
                 field.widget = widget(**options)
-            else:
+            elif field.widget:
                 if uifield.attributes:
                     field.widget.attributes = uifield.attributes
                 if uifield.options:
