@@ -110,11 +110,15 @@ def test_nested_field_lookup():
 
 def test_apply_nest_ui():
        ui_parsed = parse_ui({
-           "person.info.date": {
-               "ui:title": "Birth Date",
-               "ui:description": "Date of birth",
-               "ui:widget": "date"
-           }
+              "id": {
+                     "ui:title": "Person unique id",
+                     "ui:description": "Unique int id for a person.",
+              },
+              "person.info.date": {
+                     "ui:title": "Birth Date",
+                     "ui:description": "Date of birth",
+                     "ui:widget": "date"
+              }
        })
        schema = ComplexSchema()
        result = apply_ui_to_colander(
@@ -127,3 +131,7 @@ def test_apply_nest_ui():
        assert date_field.title == "Birth Date"
        assert date_field.description == "Date of birth"
        assert isinstance(date_field.widget, deform.widget.DateInputWidget)
+
+       id_field = schema["id"]
+       assert id_field.title == "Person unique id"
+       assert id_field.description == "Unique int id for a person."
