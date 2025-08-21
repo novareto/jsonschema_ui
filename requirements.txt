@@ -1,0 +1,2 @@
+--extra-index-url https://pypi.bg-kooperation.de/
+-e .[test]

@@ -12,6 +12,7 @@ setup(
         "test": [
             "pytest",
             "PyHamcrest",
+            "jsonschema_colander",
         ],
     },
     packages=find_packages(where="src"),

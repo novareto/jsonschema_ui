@@ -43,9 +43,9 @@ def find_field(node, path):
                 node = child
                 break
         else:
-            raise LookupError('Node not found in schema.')
+            raise LookupError(f'Node {path[0]} not found in schema.')
     else:
-        raise LookupError('Node not found in schema.')
+        raise LookupError(f'Node {path[0]} not found in schema.')
 
     if len(path) > 1:
         return find_field(node, path[1:])
