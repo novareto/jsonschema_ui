@@ -16,7 +16,7 @@ class Label(NamedTuple):
 
 class UIField(BaseModel):
     title: str = Field(alias="ui:title")
-    description: str = Field(alias="ui:description")
+    description: str = Field(alias="ui:description", default="")
     attributes: dict = Field(alias="ui:attributes", default_factory=dict)
     widget: str | None = Field(alias="ui:widget", default=None)
     column: str | None = Field(alias="ui:clumn", default=None)
@@ -36,9 +36,25 @@ def parse_ui(ui_mapping: Mapping):
 def apply_ui_to_colander(
     schema: Schema, ui: Mapping[str, UIField], widgets: dict | None = None
 ):
+    def find_field_recursive(schema, field_name):
+        """Recursively search for a field in the schema, including nested schemas"""
+        if hasattr(schema, '__getitem__') and field_name in schema:
+            return schema[field_name]
+        
+        # Search in child schemas
+        if hasattr(schema, 'children'):
+            for child in schema.children:
+                if child.name == field_name:
+                    return child
+                # Recursively search in nested schemas
+                result = find_field_recursive(child, field_name)
+                if result is not None:
+                    return result
+        return None
+    
     for name, uifield in ui.items():
-        if name in schema:
-            field = schema[name]
+        field = find_field_recursive(schema, name)
+        if field is not None:
             field.title = uifield.title
             field.description = uifield.description
             if uifield.widget is not None:
@@ -61,4 +77,6 @@ def apply_ui_to_colander(
                     field.widget.attributes = uifield.attributes
                 if uifield.options:
                     field.widget.choices = uifield.options
+        else:
+            print(f"Warnung: Feld '{name}' wurde im Schema nicht gefunden")
     return schema
