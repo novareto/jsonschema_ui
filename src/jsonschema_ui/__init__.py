@@ -36,21 +36,21 @@ def parse_ui(ui_mapping: Mapping):
 
 def find_field(node, path):
     # Handle bound schemas that might have a different structure
-    if hasattr(node, 'schema') and hasattr(node.schema, 'children'):
+    if hasattr(node, "schema") and hasattr(node.schema, "children"):
         # This is a bound schema, use the underlying schema
         node = node.schema
-    
-    if hasattr(node, '__getitem__') and path[0] in node:
+
+    if hasattr(node, "__getitem__") and path[0] in node:
         node = node[path[0]]
-    elif hasattr(node, 'children'):
+    elif hasattr(node, "children"):
         for child in node.children:
             if child.name == path[0]:
                 node = child
                 break
         else:
-            raise LookupError(f'Node {path[0]} not found in schema.')
+            raise LookupError(f"Node {path[0]} not found in schema.")
     else:
-        raise LookupError(f'Node {path[0]} not found in schema.')
+        raise LookupError(f"Node {path[0]} not found in schema.")
 
     if len(path) > 1:
         return find_field(node, path[1:])
@@ -71,9 +71,10 @@ def apply_ui_to_colander(
         "array": deform.widget.SequenceWidget,
         "date": deform.widget.DateInputWidget,
         "datetime": deform.widget.DateTimeInputWidget,
+        "datetime-local": deform.widget.DateTimeInputWidget,
         "hidden": deform.widget.HiddenWidget,
     }
-    
+
     # Merge default widgets with user-provided widgets (user widgets take precedence)
     if widgets:
         widget_map = {**default_widgets, **widgets}
@@ -81,7 +82,7 @@ def apply_ui_to_colander(
         widget_map = default_widgets
 
     for name, uifield in ui.items():
-        path = name.split('.')
+        path = name.split(".")
         field = find_field(schema, path)
 
         if field is not None:
@@ -110,7 +111,7 @@ def apply_ui_to_colander(
                 if uifield.attributes and field.widget is not None:
                     field.widget.attributes = uifield.attributes
                 if uifield.css_class and field.widget is not None:
-                    if not hasattr(field.widget, 'attributes'):
+                    if not hasattr(field.widget, "attributes"):
                         field.widget.attributes = {}
                     field.widget.attributes["class"] = uifield.css_class
                 if uifield.options and field.widget is not None:
