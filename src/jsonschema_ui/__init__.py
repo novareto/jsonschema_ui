@@ -2,6 +2,7 @@ from typing import Mapping, NamedTuple
 from pydantic import BaseModel, Field
 from colander import Schema
 from deform.widget import Widget
+import deform.widget
 
 
 class Mask(NamedTuple):
@@ -19,7 +20,7 @@ class UIField(BaseModel):
     description: str = Field(alias="ui:description", default="")
     attributes: dict = Field(alias="ui:attributes", default_factory=dict)
     widget: str | None = Field(alias="ui:widget", default=None)
-    column: str | None = Field(alias="ui:clumn", default=None)
+    css_class: str | None = Field(alias="ui:class", default=None)
     mask: Mask | None = Field(alias="ui:mask", default=None)
     options: list[Label, ...] | None = Field(alias="ui:options", default=None)
 
@@ -34,7 +35,11 @@ def parse_ui(ui_mapping: Mapping):
 
 
 def find_field(node, path):
-
+    # Handle bound schemas that might have a different structure
+    if hasattr(node, 'schema') and hasattr(node.schema, 'children'):
+        # This is a bound schema, use the underlying schema
+        node = node.schema
+    
     if hasattr(node, '__getitem__') and path[0] in node:
         node = node[path[0]]
     elif hasattr(node, 'children'):
@@ -55,6 +60,25 @@ def find_field(node, path):
 def apply_ui_to_colander(
     schema: Schema, ui: Mapping[str, UIField], widgets: dict | None = None
 ):
+    # Default widget mapping - can be overridden by widgets parameter
+    default_widgets = {
+        "radio": deform.widget.RadioChoiceWidget,
+        "select": deform.widget.SelectWidget,
+        "text": deform.widget.TextInputWidget,
+        "textarea": deform.widget.TextAreaWidget,
+        "password": deform.widget.PasswordWidget,
+        "checkbox": deform.widget.CheckboxWidget,
+        "array": deform.widget.SequenceWidget,
+        "date": deform.widget.DateInputWidget,
+        "datetime": deform.widget.DateTimeInputWidget,
+        "hidden": deform.widget.HiddenWidget,
+    }
+    
+    # Merge default widgets with user-provided widgets (user widgets take precedence)
+    if widgets:
+        widget_map = {**default_widgets, **widgets}
+    else:
+        widget_map = default_widgets
 
     for name, uifield in ui.items():
         path = name.split('.')
@@ -64,14 +88,18 @@ def apply_ui_to_colander(
             field.title = uifield.title
             field.description = uifield.description
             if uifield.widget is not None:
-                if not widgets:
+                if uifield.widget not in widget_map:
                     raise ValueError(
-                        f"Widgets mapping is missing while looking for {uifield.widget}."
+                        f"Widget '{uifield.widget}' not found in widget mapping."
                     )
-                widget = widgets[uifield.widget]
+                widget = widget_map[uifield.widget]
                 options = {}
                 if uifield.attributes:
                     options["attributes"] = uifield.attributes
+                if uifield.css_class:
+                    if "attributes" not in options:
+                        options["attributes"] = {}
+                    options["attributes"]["class"] = uifield.css_class
                 if uifield.options:
                     options["choices"] = uifield.options
                     options["values"] = uifield.options
@@ -81,6 +109,10 @@ def apply_ui_to_colander(
             else:
                 if uifield.attributes and field.widget is not None:
                     field.widget.attributes = uifield.attributes
+                if uifield.css_class and field.widget is not None:
+                    if not hasattr(field.widget, 'attributes'):
+                        field.widget.attributes = {}
+                    field.widget.attributes["class"] = uifield.css_class
                 if uifield.options and field.widget is not None:
                     field.widget.choices = uifield.options
         else:
