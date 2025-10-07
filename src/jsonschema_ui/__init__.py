@@ -22,7 +22,7 @@ class UIField(BaseModel):
     widget: str | None = Field(alias="ui:widget", default=None)
     css_class: str | None = Field(alias="ui:class", default=None)
     mask: Mask | None = Field(alias="ui:mask", default=None)
-    options: list[Label, ...] | None = Field(alias="ui:options", default=None)
+    options: list[Label] | None = Field(alias="ui:options", default=None)
 
 
 def parse_ui(ui_mapping: Mapping):
