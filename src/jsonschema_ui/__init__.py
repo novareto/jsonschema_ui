@@ -22,13 +22,13 @@ class UIField(BaseModel):
     widget: str | None = Field(alias="ui:widget", default=None)
     css_class: str | None = Field(alias="ui:class", default=None)
     mask: Mask | None = Field(alias="ui:mask", default=None)
-    options: list[Label, ...] | None = Field(alias="ui:options", default=None)
+    options: list[Label] | None = Field(alias="ui:options", default=None)
 
 
 def parse_ui(ui_mapping: Mapping):
     uischema = {}
     for field, config in ui_mapping.items():
-        if "options" in config and not "widget" in config:
+        if "options" in config and "widget" not in config:
             raise KeyError("Options were provided but no widget.")
         uischema[field] = UIField(**config)
     return uischema
