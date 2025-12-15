@@ -3,6 +3,9 @@ from pydantic import BaseModel, Field
 from colander import Schema
 from deform.widget import Widget
 import deform.widget
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class Mask(NamedTuple):
@@ -48,9 +51,11 @@ def find_field(node, path):
                 node = child
                 break
         else:
-            raise LookupError(f"Node {path[0]} not found in schema.")
+            logger.warning(f"Node {path[0]} not found in schema.")
+            return None
     else:
-        raise LookupError(f"Node {path[0]} not found in schema.")
+        logger.warning(f"Node {path[0]} not found in schema.")
+        return None
 
     if len(path) > 1:
         return find_field(node, path[1:])
@@ -67,7 +72,7 @@ def apply_ui_to_colander(
         "text": deform.widget.TextInputWidget,
         "textarea": deform.widget.TextAreaWidget,
         "password": deform.widget.PasswordWidget,
-        "checkbox": deform.widget.CheckboxWidget,
+        "checkbox": deform.widget.CheckboxChoiceWidget,
         "array": deform.widget.SequenceWidget,
         "date": deform.widget.DateInputWidget,
         "datetime": deform.widget.DateTimeInputWidget,
