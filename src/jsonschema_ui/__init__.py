@@ -26,6 +26,7 @@ class UIField(BaseModel):
     css_class: str | None = Field(alias="ui:class", default=None)
     mask: Mask | None = Field(alias="ui:mask", default=None)
     options: list[Label] | None = Field(alias="ui:options", default=None)
+    placeholder: str | None = Field(alias="ui:placeholder", default=None)
 
 
 def parse_ui(ui_mapping: Mapping):
@@ -111,6 +112,10 @@ def apply_ui_to_colander(
                     options["values"] = uifield.options
                 if uifield.mask:
                     options.update(uifield.mask._asdict())
+                if uifield.placeholder:
+                    if "attributes" not in options:
+                        options["attributes"] = {}
+                    options["attributes"]["placeholder"] = uifield.placeholder
                 field.widget = widget(**options)
             else:
                 if uifield.attributes and field.widget is not None:
@@ -121,6 +126,10 @@ def apply_ui_to_colander(
                     field.widget.attributes["class"] = uifield.css_class
                 if uifield.options and field.widget is not None:
                     field.widget.choices = uifield.options
+                if uifield.placeholder and field.widget is not None:
+                    if not hasattr(field.widget, "attributes") or field.widget.attributes is None:
+                        field.widget.attributes = {}
+                    field.widget.attributes["placeholder"] = uifield.placeholder
         else:
             print(f"Warnung: Feld '{name}' wurde im Schema nicht gefunden")
     return schema
