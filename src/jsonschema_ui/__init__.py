@@ -75,6 +75,7 @@ def apply_ui_to_colander(
         "checkbox": deform.widget.CheckboxChoiceWidget,
         "array": deform.widget.SequenceWidget,
         "date": deform.widget.DateInputWidget,
+        "time": deform.widget.TimeInputWidget,
         "datetime": deform.widget.DateTimeInputWidget,
         "datetime-local": deform.widget.DateTimeInputWidget,
         "hidden": deform.widget.HiddenWidget,
