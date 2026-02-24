@@ -3,6 +3,7 @@ from pydantic import BaseModel, Field
 from colander import Schema
 from deform.widget import Widget
 import deform.widget
+import json
 import logging
 
 logger = logging.getLogger(__name__)
@@ -18,6 +19,12 @@ class Label(NamedTuple):
     label: str
 
 
+class Condition(BaseModel):
+    field: str
+    operator: str
+    value: str
+
+
 class UIField(BaseModel):
     title: str = Field(alias="ui:title")
     description: str = Field(alias="ui:description", default="")
@@ -27,6 +34,32 @@ class UIField(BaseModel):
     mask: Mask | None = Field(alias="ui:mask", default=None)
     options: list[Label] | None = Field(alias="ui:options", default=None)
     placeholder: str | None = Field(alias="ui:placeholder", default=None)
+    conditions: list[Condition] | None = Field(
+        alias="ui:conditions", default=None
+    )
+    condition_logic: str | None = Field(
+        alias="ui:condition_logic", default=None
+    )
+
+    def get_conditions_attrs(self) -> dict:
+        """Convert ui:conditions to data-conditions attributes for the JS."""
+        if not self.conditions:
+            return {}
+        attrs = {}
+        if len(self.conditions) == 1:
+            # Single condition format: {field, operator, value}
+            attrs["data-conditions"] = json.dumps(
+                self.conditions[0].model_dump()
+            )
+        else:
+            # Multi condition format: {conditions: [...], logic: "and|or"}
+            attrs["data-conditions"] = json.dumps({
+                "conditions": [c.model_dump() for c in self.conditions],
+                "logic": self.condition_logic or "and",
+            })
+        if self.condition_logic:
+            attrs["data-condition-logic"] = self.condition_logic
+        return attrs
 
 
 def parse_ui(ui_mapping: Mapping):
@@ -95,6 +128,8 @@ def apply_ui_to_colander(
         if field is not None:
             field.title = uifield.title
             field.description = uifield.description
+            # Convert ui:conditions to data-conditions attributes
+            conditions_attrs = uifield.get_conditions_attrs()
             if uifield.widget is not None:
                 if uifield.widget not in widget_map:
                     raise ValueError(
@@ -104,6 +139,10 @@ def apply_ui_to_colander(
                 options = {}
                 if uifield.attributes:
                     options["attributes"] = uifield.attributes
+                if conditions_attrs:
+                    if "attributes" not in options:
+                        options["attributes"] = {}
+                    options["attributes"].update(conditions_attrs)
                 if uifield.css_class:
                     if "attributes" not in options:
                         options["attributes"] = {}
@@ -121,6 +160,10 @@ def apply_ui_to_colander(
             else:
                 if uifield.attributes and field.widget is not None:
                     field.widget.attributes = uifield.attributes
+                if conditions_attrs and field.widget is not None:
+                    if not hasattr(field.widget, "attributes") or field.widget.attributes is None:
+                        field.widget.attributes = {}
+                    field.widget.attributes.update(conditions_attrs)
                 if uifield.css_class and field.widget is not None:
                     if not hasattr(field.widget, "attributes"):
                         field.widget.attributes = {}
