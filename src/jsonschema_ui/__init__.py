@@ -101,6 +101,9 @@ def apply_ui_to_colander(
                         f"Widget '{uifield.widget}' not found in widget mapping."
                     )
                 widget = widget_map[uifield.widget]
+                # For checkbox without options, use single CheckboxWidget
+                if uifield.widget == "checkbox" and not uifield.options:
+                    widget = deform.widget.CheckboxWidget
                 options = {}
                 if uifield.attributes:
                     options["attributes"] = uifield.attributes
