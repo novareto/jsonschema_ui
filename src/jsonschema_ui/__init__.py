@@ -1,6 +1,6 @@
 from typing import Mapping, NamedTuple
 from pydantic import BaseModel, Field
-from colander import Schema
+from colander import Schema, deferred
 from deform.widget import Widget
 import deform.widget
 import logging
@@ -20,6 +20,7 @@ class Label(NamedTuple):
 
 class UIField(BaseModel):
     title: str = Field(alias="ui:title")
+    readonly: bool = Field(alias="ui:readonly", default=False)
     description: str = Field(alias="ui:description", default="")
     attributes: dict = Field(alias="ui:attributes", default_factory=dict)
     widget: str | None = Field(alias="ui:widget", default=None)
@@ -101,12 +102,19 @@ def apply_ui_to_colander(
                         f"Widget '{uifield.widget}' not found in widget mapping."
                     )
                 widget = widget_map[uifield.widget]
+
+                if isinstance(widget, deferred):
+                    field.widget = widget
+                    continue
+
                 # For checkbox without options, use single CheckboxWidget
                 if uifield.widget == "checkbox" and not uifield.options:
                     widget = deform.widget.CheckboxWidget
                 options = {}
                 if uifield.attributes:
                     options["attributes"] = uifield.attributes
+                if uifield.readonly:
+                    options["readonly"] = uifield.readonly
                 if uifield.css_class:
                     if "attributes" not in options:
                         options["attributes"] = {}
@@ -122,6 +130,8 @@ def apply_ui_to_colander(
                     options["attributes"]["placeholder"] = uifield.placeholder
                 field.widget = widget(**options)
             else:
+                if uifield.readonly:
+                    field.widget.readonly = uifield.readonly
                 if uifield.attributes and field.widget is not None:
                     field.widget.attributes = uifield.attributes
                 if uifield.css_class and field.widget is not None:
