@@ -52,10 +52,10 @@ def find_field(node, path):
                 node = child
                 break
         else:
-            logger.warning(f"Node {path[0]} not found in schema.")
+            logger.debug(f"Node {path[0]} not found in schema.")
             return None
     else:
-        logger.warning(f"Node {path[0]} not found in schema.")
+        logger.debug(f"Node {path[0]} not found in schema.")
         return None
 
     if len(path) > 1:
@@ -135,5 +135,5 @@ def apply_ui_to_colander(
                         field.widget.attributes = {}
                     field.widget.attributes["placeholder"] = uifield.placeholder
         else:
-            print(f"Warnung: Feld '{name}' wurde im Schema nicht gefunden")
+            logger.debug(f"Feld '{name}' wurde im Schema nicht gefunden")
     return schema
