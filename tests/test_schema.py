@@ -28,6 +28,16 @@ class ComplexSchema(colander.Schema):
        person = Person()
 
 
+@colander.deferred
+def type_field(node, kw):
+       return deform.widget.CheckboxChoiceWidget(
+              values=(
+                     ('type1', "type1"),
+                     ('type2', "type2"),
+              )
+       )
+
+
 class DocumentSchema(colander.Schema):
 
        title = colander.SchemaNode(
@@ -85,6 +95,23 @@ EXAMPLE = {
 }
 
 
+EXAMPLE2 = {
+       "title": {
+              "ui:title": "Title of the document",
+              "ui:description": "Representative title of the document",
+       },
+       "type": {
+              "ui:title": "Type of document",
+              "ui:description": "Representative title of the document",
+              "ui:widget": "doctype",
+       },
+       "body": {
+              "ui:title": "Body",
+              "ui:description": "Core text containing a full contract",
+       }
+}
+
+
 def test_schema():
     result = parse_ui(EXAMPLE)
 
@@ -96,6 +123,18 @@ def test_apply():
         ui,
         widgets={"radio": deform.widget.RadioChoiceWidget}
     )
+
+
+def test_apply_deferred():
+    ui = parse_ui(EXAMPLE2)
+    schema = apply_ui_to_colander(
+        DocumentSchema(),
+        ui,
+        widgets={"doctype": type_field}
+    )
+    schema = schema.bind(request=None)
+    assert isinstance(
+           schema['type'].widget, deform.widget.CheckboxChoiceWidget)
 
 
 def test_nested_field_lookup():
