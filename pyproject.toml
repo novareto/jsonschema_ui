@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jsonschema_ui"
+version = "0.0.1"
+description = "Apply UI hints (uiSchema) to colander/deform schemas."
+readme = "README.rst"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+authors = [
+    { name = "Novareto" },
+]
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "pydantic>=2.0",
+    "colander",
+    "deform",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "PyHamcrest",
+    "jsonschema_colander",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+jsonschema_ui = ["*.pt"]

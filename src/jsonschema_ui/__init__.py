@@ -3,6 +3,7 @@ from pydantic import BaseModel, Field
 from colander import Schema, deferred
 from deform.widget import Widget
 import deform.widget
+import json
 import logging
 
 logger = logging.getLogger(__name__)
@@ -28,6 +29,8 @@ class UIField(BaseModel):
     mask: Mask | None = Field(alias="ui:mask", default=None)
     options: list[Label] | None = Field(alias="ui:options", default=None)
     placeholder: str | None = Field(alias="ui:placeholder", default=None)
+    conditions: list[dict] | None = Field(alias="ui:conditions", default=None)
+    condition_logic: str | None = Field(alias="ui:condition_logic", default=None)
 
 
 def parse_ui(ui_mapping: Mapping):
@@ -45,8 +48,28 @@ def find_field(node, path):
         # This is a bound schema, use the underlying schema
         node = node.schema
 
-    if hasattr(node, "__getitem__") and path[0] in node:
-        node = node[path[0]]
+    # For sequence/array nodes, "items" refers to the single child schema.
+    # The colander Sequence has a single child that represents the item type.
+    if path[0] == "items" and hasattr(node, "children") and len(node.children) == 1:
+        node = node.children[0]
+    elif hasattr(node, "__getitem__"):
+        try:
+            if path[0] in node:
+                node = node[path[0]]
+            else:
+                raise KeyError(path[0])
+        except (KeyError, TypeError):
+            if hasattr(node, "children"):
+                for child in node.children:
+                    if child.name == path[0]:
+                        node = child
+                        break
+                else:
+                    logger.debug(f"Node {path[0]} not found in schema.")
+                    return None
+            else:
+                logger.debug(f"Node {path[0]} not found in schema.")
+                return None
     elif hasattr(node, "children"):
         for child in node.children:
             if child.name == path[0]:
@@ -96,6 +119,17 @@ def apply_ui_to_colander(
         if field is not None:
             field.title = uifield.title
             field.description = uifield.description
+            # Attach UI conditions to the colander node so templates can render
+            # data-conditions attributes for fields rendered by deform (e.g.
+            # inside array items where the cpt_generator can't statically wrap
+            # them with conditional-field markup).
+            if uifield.conditions:
+                field._ui_conditions_json = json.dumps(
+                    {
+                        "conditions": list(uifield.conditions),
+                        "logic": uifield.condition_logic or "or",
+                    }
+                )
             if uifield.widget is not None:
                 if uifield.widget not in widget_map:
                     raise ValueError(
