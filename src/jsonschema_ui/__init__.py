@@ -31,6 +31,7 @@ class UIField(BaseModel):
     placeholder: str | None = Field(alias="ui:placeholder", default=None)
     conditions: list[dict] | None = Field(alias="ui:conditions", default=None)
     condition_logic: str | None = Field(alias="ui:condition_logic", default=None)
+    unit: str | None = Field(alias="ui:unit", default=None)
 
 
 def parse_ui(ui_mapping: Mapping):
@@ -123,6 +124,8 @@ def apply_ui_to_colander(
             # data-conditions attributes for fields rendered by deform (e.g.
             # inside array items where the cpt_generator can't statically wrap
             # them with conditional-field markup).
+            if uifield.unit:
+                field._ui_unit = uifield.unit
             if uifield.conditions:
                 field._ui_conditions_json = json.dumps(
                     {
